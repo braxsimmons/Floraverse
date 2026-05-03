@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 36% 97%;
+    --foreground: 140 18% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 140 18% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 140 18% 14%;
+
+    --primary: 142 36% 38%;            /* sage-green */
+    --primary-foreground: 50 30% 98%;
+
+    --secondary: 36 80% 92%;
+    --secondary-foreground: 25 35% 22%;
+
+    --muted: 40 24% 94%;
+    --muted-foreground: 150 8% 38%;
+
+    --accent: 30 70% 88%;
+    --accent-foreground: 25 35% 18%;
+
+    --destructive: 0 70% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 40 18% 88%;
+    --input: 40 18% 88%;
+    --ring: 142 36% 38%;
+    --radius: 1rem;
+
+    --bloom-rose: 0 80% 88%;
+    --bloom-peach: 25 95% 86%;
+    --bloom-mint: 140 35% 82%;
+    --bloom-sage: 130 18% 62%;
+    --bloom-lavender: 264 40% 86%;
+    --bloom-gold: 40 80% 75%;
+
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto;
+    --font-display: "Fraunces", Georgia, serif;
+  }
+
+  .dark {
+    --background: 150 10% 8%;
+    --foreground: 50 20% 96%;
+
+    --card: 150 10% 11%;
+    --card-foreground: 50 20% 96%;
+    --popover: 150 10% 11%;
+    --popover-foreground: 50 20% 96%;
+
+    --primary: 142 36% 56%;
+    --primary-foreground: 150 10% 8%;
+
+    --secondary: 150 8% 18%;
+    --secondary-foreground: 50 20% 96%;
+
+    --muted: 150 8% 16%;
+    --muted-foreground: 150 8% 65%;
+
+    --accent: 150 8% 18%;
+    --accent-foreground: 50 20% 96%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 150 8% 22%;
+    --input: 150 8% 22%;
+    --ring: 142 36% 56%;
+  }
+
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(at 20% -10%, hsl(var(--bloom-mint) / 0.5), transparent 60%),
+      radial-gradient(at 100% 10%, hsl(var(--bloom-peach) / 0.45), transparent 50%),
+      radial-gradient(at 30% 100%, hsl(var(--bloom-lavender) / 0.35), transparent 55%);
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-image:
+      radial-gradient(at 20% -10%, hsl(142 36% 18% / 0.6), transparent 60%),
+      radial-gradient(at 100% 10%, hsl(264 30% 18% / 0.5), transparent 50%),
+      radial-gradient(at 30% 100%, hsl(25 30% 12% / 0.5), transparent 55%);
+  }
+}
+
+@layer components {
+  .pretty-card {
+    @apply rounded-2xl border bg-card text-card-foreground shadow-soft;
+  }
+  .pretty-card-cozy {
+    @apply pretty-card shadow-cozy;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full border bg-card/80 px-2.5 py-1 text-xs font-medium backdrop-blur;
+  }
+  .glass {
+    @apply backdrop-blur-md bg-card/70 border border-white/40;
+  }
+  .display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { scrollbar-width: none; }
+}

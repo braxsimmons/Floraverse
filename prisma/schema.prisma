@@ -1,0 +1,729 @@
+// Floraverse — Prisma schema
+// Postgres + Prisma Client
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================
+// AUTH (Auth.js compatible)
+// =============================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// =============================
+// USER + PROFILE
+// =============================
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PLUS
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  username      String?   @unique
+  hashedPassword String?
+  image         String?
+  role          Role      @default(USER)
+  bannedAt      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Game economy
+  petals        Int       @default(150)   // free currency
+  bloomCoins    Int       @default(10)    // premium currency
+  xp            Int       @default(0)
+  level         Int       @default(1)
+
+  // Streak / retention
+  streakCount       Int       @default(0)
+  lastStreakAt      DateTime?
+  lastDailyClaimAt  DateTime?
+  lastTimedClaimAt  DateTime?
+  onboardedAt       DateTime?
+
+  // Subscription
+  subscriptionTier   SubscriptionTier @default(FREE)
+  stripeCustomerId   String?          @unique
+  stripeSubscriptionId String?        @unique
+  subscriptionEndsAt DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  garden        Garden?
+  inventory     InventoryItem[]
+  plants        UserPlant[]
+  careActions   CareAction[]
+  ledger        CurrencyLedger[]
+  transactions  Transaction[]
+  questProgress UserQuestProgress[]
+  achievements  UserAchievement[]
+  notifications Notification[]
+  activities    ActivityLog[]
+  reportsMade   Report[]    @relation("ReportsByUser")
+  reportsAgainst Report[]   @relation("ReportsAgainstUser")
+  blocksMade    Block[]     @relation("BlocksByUser")
+  blocksAgainst Block[]     @relation("BlocksAgainstUser")
+  friendshipsA  Friendship[] @relation("FriendshipUserA")
+  friendshipsB  Friendship[] @relation("FriendshipUserB")
+  visitsMade    GardenVisit[] @relation("VisitorUser")
+  visitsReceived GardenVisit[] @relation("HostUser")
+  notesAuthored GardenNote[] @relation("NoteAuthor")
+  notesReceived GardenNote[] @relation("NoteRecipient")
+  reactionsMade GardenReaction[]
+  seedDrops     SeedPackDrop[]
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  bio       String?  @db.Text
+  banner    String?
+  pronouns  String?
+  location  String?
+  showcase  Json?    // featured plants etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// =============================
+// GARDEN
+// =============================
+
+enum GardenSlotType {
+  PLANT
+  DECORATION
+  EMPTY
+}
+
+model Garden {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  name         String   @default("My Garden")
+  theme        String   @default("meadow")
+  width        Int      @default(6)
+  height       Int      @default(6)
+  background   String   @default("default")
+  isPublic     Boolean  @default(true)
+  totalVisits  Int      @default(0)
+  totalLikes   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots  GardenSlot[]
+  visits GardenVisit[]
+  notes  GardenNote[]
+  reactions GardenReaction[]
+
+  @@index([isPublic])
+}
+
+model GardenSlot {
+  id           String         @id @default(cuid())
+  gardenId     String
+  x            Int
+  y            Int
+  type         GardenSlotType @default(EMPTY)
+  userPlantId  String?        @unique
+  decorationId String?        // refers to ShopItem.sku for decorations
+  rotation     Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  garden    Garden     @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  userPlant UserPlant? @relation(fields: [userPlantId], references: [id], onDelete: SetNull)
+
+  @@unique([gardenId, x, y])
+  @@index([gardenId])
+}
+
+// =============================
+// PLANTS
+// =============================
+
+enum Rarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum PlantStage {
+  SEED
+  SPROUT
+  GROWING
+  BLOOMING
+  WITHERED
+}
+
+model PlantSpecies {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  name          String
+  scientific    String?
+  description   String   @db.Text
+  rarity        Rarity   @default(COMMON)
+  baseGrowthMs  Int      // total growth time in ms (sum across stages)
+  waterIntervalMs Int    // recommended watering interval
+  imageSeed     String   // image filename prefix in /public/assets/plants
+  unlockLevel   Int      @default(1)
+  petalsPerHarvest Int   @default(10)
+  xpPerHarvest    Int    @default(20)
+  isPremium     Boolean  @default(false)
+  isSeasonal    Boolean  @default(false)
+  tags          String[] @default([])
+  createdAt     DateTime @default(now())
+
+  userPlants UserPlant[]
+  packDrops  SeedPackDrop[]
+
+  @@index([rarity])
+  @@index([unlockLevel])
+}
+
+model UserPlant {
+  id           String     @id @default(cuid())
+  userId       String
+  speciesId    String
+  nickname     String?
+  stage        PlantStage @default(SEED)
+  plantedAt    DateTime   @default(now())
+  lastWateredAt DateTime  @default(now())
+  lastFertilizedAt DateTime?
+  growthMsAccumulated Int @default(0)   // tracked growth (paused while wilted)
+  isWilted     Boolean    @default(false)
+  health       Int        @default(100)
+  harvestedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  species PlantSpecies @relation(fields: [speciesId], references: [id])
+  slot    GardenSlot?
+  actions CareAction[]
+
+  @@index([userId])
+  @@index([speciesId])
+}
+
+enum CareActionType {
+  WATER
+  FERTILIZE
+  TALK
+  HARVEST
+  REVIVE
+}
+
+model CareAction {
+  id          String         @id @default(cuid())
+  userId      String
+  userPlantId String
+  type        CareActionType
+  xpGained    Int            @default(0)
+  petalsGained Int           @default(0)
+  createdAt   DateTime       @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userPlant UserPlant @relation(fields: [userPlantId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userPlantId])
+}
+
+// =============================
+// SHOP / INVENTORY / ECONOMY
+// =============================
+
+enum ShopItemKind {
+  SEED
+  DECORATION
+  THEME
+  CONSUMABLE
+  COIN_PACK
+  SUBSCRIPTION
+}
+
+enum CurrencyKind {
+  PETALS
+  COINS
+  USD
+}
+
+model ShopItem {
+  id          String       @id @default(cuid())
+  sku         String       @unique
+  name        String
+  description String       @db.Text
+  kind        ShopItemKind
+  rarity      Rarity       @default(COMMON)
+  priceCurrency CurrencyKind @default(PETALS)
+  price       Int          // amount in chosen currency (cents for USD)
+  image       String
+  metadata    Json?
+  unlockLevel Int          @default(1)
+  isPremium   Boolean      @default(false)
+  isFeatured  Boolean      @default(false)
+  isActive    Boolean      @default(true)
+  stripePriceId String?
+  speciesId   String?      // for SEED kind, links to species via id
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  inventory InventoryItem[]
+
+  @@index([kind])
+  @@index([isActive])
+}
+
+model InventoryItem {
+  id          String   @id @default(cuid())
+  userId      String
+  shopItemId  String
+  quantity    Int      @default(1)
+  acquiredAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopItem ShopItem @relation(fields: [shopItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, shopItemId])
+  @@index([userId])
+}
+
+model CurrencyLedger {
+  id        String       @id @default(cuid())
+  userId    String
+  currency  CurrencyKind
+  delta     Int          // positive credit / negative debit
+  reason    String       // e.g. "DAILY_CLAIM", "QUEST_REWARD", "SHOP_PURCHASE:sku"
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([currency])
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum TransactionKind {
+  ONE_TIME
+  SUBSCRIPTION
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  userId          String
+  kind            TransactionKind
+  status          TransactionStatus @default(PENDING)
+  amountCents     Int
+  currency        String            @default("usd")
+  stripeSessionId String?           @unique
+  stripeInvoiceId String?
+  stripePaymentIntent String?
+  description     String?
+  metadata        Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Stripe subscription mirror table
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  stripeSubscriptionId String @unique
+  stripePriceId     String
+  status            String
+  currentPeriodEnd  DateTime
+  cancelAtPeriodEnd Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// =============================
+// SOCIAL
+// =============================
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+model Friendship {
+  id        String           @id @default(cuid())
+  userAId   String           // initiator
+  userBId   String           // recipient
+  status    FriendshipStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  userA User @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+  @@index([status])
+}
+
+model GardenVisit {
+  id        String   @id @default(cuid())
+  gardenId  String
+  visitorId String
+  hostId    String
+  createdAt DateTime @default(now())
+
+  garden  Garden @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  visitor User   @relation("VisitorUser", fields: [visitorId], references: [id], onDelete: Cascade)
+  host    User   @relation("HostUser", fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([gardenId, createdAt])
+  @@index([hostId])
+}
+
+enum NoteStatus {
+  VISIBLE
+  HIDDEN
+  REPORTED
+}
+
+model GardenNote {
+  id          String     @id @default(cuid())
+  gardenId    String
+  authorId    String
+  recipientId String
+  content     String     @db.Text
+  status      NoteStatus @default(VISIBLE)
+  createdAt   DateTime   @default(now())
+
+  garden    Garden @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  author    User   @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  recipient User   @relation("NoteRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([gardenId, createdAt])
+  @@index([recipientId])
+}
+
+enum ReactionKind {
+  HEART
+  SPARKLE
+  SUN
+  WATER
+  STAR
+}
+
+model GardenReaction {
+  id        String       @id @default(cuid())
+  gardenId  String
+  userId    String
+  kind      ReactionKind
+  createdAt DateTime     @default(now())
+
+  garden Garden @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gardenId, userId, kind])
+  @@index([gardenId])
+}
+
+// =============================
+// QUESTS / ACHIEVEMENTS
+// =============================
+
+enum QuestKind {
+  DAILY
+  WEEKLY
+  ONE_TIME
+}
+
+enum QuestActionKey {
+  WATER_PLANTS
+  HARVEST_PLANTS
+  PLANT_SEEDS
+  VISIT_GARDENS
+  LEAVE_NOTES
+  COMPLETE_LOGIN
+  REACT_GARDEN
+  BUY_ITEM
+}
+
+model Quest {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  title       String
+  description String         @db.Text
+  kind        QuestKind
+  actionKey   QuestActionKey
+  goal        Int            @default(1)
+  rewardPetals Int           @default(0)
+  rewardCoins  Int           @default(0)
+  rewardXp     Int           @default(0)
+  rewardItemSku String?
+  icon        String?
+  isActive    Boolean        @default(true)
+  weight      Int            @default(1)
+  createdAt   DateTime       @default(now())
+
+  progress UserQuestProgress[]
+
+  @@index([kind])
+}
+
+model UserQuestProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  questId     String
+  progress    Int       @default(0)
+  goal        Int       @default(1)
+  completedAt DateTime?
+  claimedAt   DateTime?
+  expiresAt   DateTime?
+  assignedAt  DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId, assignedAt])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String   @db.Text
+  icon        String?
+  threshold   Int      @default(1)
+  metric      String   // "PLANTS_HARVESTED", "STREAK_DAYS", etc.
+  rewardPetals Int     @default(0)
+  rewardCoins Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  earned UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  progress      Int      @default(0)
+  earnedAt      DateTime?
+  createdAt     DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+// =============================
+// SEED PACKS / DROPS / EVENTS
+// =============================
+
+model SeedPack {
+  id          String   @id @default(cuid())
+  sku         String   @unique
+  name        String
+  description String   @db.Text
+  priceCoins  Int      @default(50)
+  pricePetals Int?
+  rarityWeights Json   // { COMMON: 60, UNCOMMON: 25, RARE: 10, EPIC: 4, LEGENDARY: 1 }
+  image       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  drops SeedPackDrop[]
+}
+
+model SeedPackDrop {
+  id          String   @id @default(cuid())
+  userId      String
+  seedPackId  String
+  speciesId   String
+  rarity      Rarity
+  createdAt   DateTime @default(now())
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seedPack SeedPack     @relation(fields: [seedPackId], references: [id], onDelete: Cascade)
+  species  PlantSpecies @relation(fields: [speciesId], references: [id])
+
+  @@index([userId])
+}
+
+model SeasonalEvent {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String   @db.Text
+  startsAt    DateTime
+  endsAt      DateTime
+  bannerImage String?
+  rewards     Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// =============================
+// MODERATION + AUDIT
+// =============================
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  reporterId  String
+  targetUserId String?
+  noteId      String?
+  reason      String
+  details     String?      @db.Text
+  status      ReportStatus @default(PENDING)
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  reporter   User  @relation("ReportsByUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser User? @relation("ReportsAgainstUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  userId    String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  user    User @relation("BlocksByUser", fields: [userId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksAgainstUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blockedId])
+}
+
+// =============================
+// NOTIFICATIONS / ACTIVITY / ANALYTICS
+// =============================
+
+enum NotificationKind {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  GARDEN_VISIT
+  GARDEN_NOTE
+  GARDEN_REACTION
+  PLANT_BLOOMED
+  PLANT_WILTING
+  QUEST_COMPLETE
+  ACHIEVEMENT
+  SHOP_DROP
+  SYSTEM
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  kind      NotificationKind
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  event     String
+  metadata  Json?
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([event, createdAt])
+  @@index([userId, createdAt])
+}
+
+// =============================
+// ADMIN SETTINGS / FEATURE FLAGS
+// =============================
+
+model AdminSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
