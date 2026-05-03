@@ -8,13 +8,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, Sparkles, Star, Sun, Droplet } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
-export default async function PublicGarden({ params }: { params: { username: string } }) {
+export default async function PublicGarden({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect(`/login?callbackUrl=/u/${params.username}`);
+  if (!session?.user?.id) redirect(`/login?callbackUrl=/u/${username}`);
 
   let garden;
   try {
-    garden = await visitGarden(params.username);
+    garden = await visitGarden(username);
   } catch {
     notFound();
   }
@@ -24,11 +25,11 @@ export default async function PublicGarden({ params }: { params: { username: str
       <Card className="bg-gradient-to-br from-bloom-mint/30 via-card to-bloom-lavender/30">
         <CardHeader className="flex-row items-center gap-4">
           <Avatar className="h-12 w-12">
-            <AvatarFallback>{params.username.slice(0, 1).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{username.slice(0, 1).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div>
             <CardTitle className="display text-2xl">{garden.name}</CardTitle>
-            <CardDescription>by @{params.username} · {garden.totalVisits} visits · {garden.totalLikes} reactions</CardDescription>
+            <CardDescription>by @{username} · {garden.totalVisits} visits · {garden.totalLikes} reactions</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -49,7 +50,7 @@ export default async function PublicGarden({ params }: { params: { username: str
         <CardContent>
           <GuestActions
             gardenId={garden.id}
-            recipientUsername={params.username}
+            recipientUsername={username}
           />
         </CardContent>
       </Card>
