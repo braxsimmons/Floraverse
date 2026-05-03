@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { PrismaClient, Rarity } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
