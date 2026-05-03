@@ -6,11 +6,11 @@ import { toast } from "@/components/ui/toast";
 
 export function CheckoutButton({
   sku,
-  mode,
+  mode = "payment",
   priceId,
 }: {
   sku: string;
-  mode: "subscription" | "payment";
+  mode?: "subscription" | "payment";
   priceId: string;
 }) {
   const [busy, start] = useTransition();

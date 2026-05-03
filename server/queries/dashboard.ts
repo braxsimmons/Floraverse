@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
-import { computeGrowth } from "@/lib/plant-engine";
+import { computeGrowth, toPlantView } from "@/lib/plant-engine";
 import { ECONOMY } from "@/lib/config";
 import { isSameLocalDay } from "@/lib/utils";
 import { nextTimedRewardAt } from "@/lib/streak";
@@ -30,16 +30,8 @@ export async function loadDashboard(userId: string) {
     .filter((s) => s.userPlant)
     .map((s) => {
       const p = s.userPlant!;
-      const live = computeGrowth({ ...p, species: p.species });
-      return {
-        id: p.id,
-        name: p.species.name,
-        rarity: p.species.rarity,
-        imageSeed: p.species.imageSeed,
-        x: s.x,
-        y: s.y,
-        ...live,
-      };
+      const view = toPlantView({ ...p, species: p.species }, now);
+      return { ...view, x: s.x, y: s.y };
     });
 
   const dailyClaimed = user.lastDailyClaimAt
@@ -57,12 +49,13 @@ export async function loadDashboard(userId: string) {
       username: user.username,
       petals: user.petals,
       coins: user.bloomCoins,
+      gems: user.gems,
       level: user.level,
       xp: user.xp,
       xpInLevel: xpInfo.xpInLevel,
       xpToNext: xpInfo.xpToNext,
       streakCount: user.streakCount,
-      subscriptionTier: user.subscriptionTier,
+      unlockedBiomes: user.unlockedBiomes,
     },
     rewards: {
       dailyClaimed,

@@ -22,6 +22,7 @@ const PLANTS: Array<{
   isPremium?: boolean;
   isSeasonal?: boolean;
   tags?: string[];
+  biome?: string;
 }> = [
   // COMMON (8)
   { sku: "p_marigold", name: "Marigold", scientific: "Tagetes erecta", description: "Cheerful golden bloom — easy keeper for new gardeners.", rarity: "COMMON", baseGrowthMs: 6 * HOUR, waterIntervalMs: 8 * HOUR, imageSeed: "marigold", unlockLevel: 1, petalsPerHarvest: 14, xpPerHarvest: 18, tags: ["sunny"] },
@@ -47,11 +48,11 @@ const PLANTS: Array<{
   { sku: "p_peony", name: "Peony", description: "Generous ruffles. Brief season. Worth it.", rarity: "RARE", baseGrowthMs: 2 * DAY, waterIntervalMs: 16 * HOUR, imageSeed: "peony", unlockLevel: 7, petalsPerHarvest: 100, xpPerHarvest: 130 },
 
   // EPIC (2)
-  { sku: "p_blueglow", name: "Blueglow Lily", description: "Faintly luminescent at dusk. Worth the wait.", rarity: "EPIC", baseGrowthMs: 4 * DAY, waterIntervalMs: 24 * HOUR, imageSeed: "blueglow", unlockLevel: 14, petalsPerHarvest: 280, xpPerHarvest: 320, tags: ["night"] },
-  { sku: "p_starbloom", name: "Starbloom", description: "Folds into a five-pointed star at midnight.", rarity: "EPIC", baseGrowthMs: 5 * DAY, waterIntervalMs: 24 * HOUR, imageSeed: "starbloom", unlockLevel: 16, petalsPerHarvest: 320, xpPerHarvest: 400, isPremium: true },
+  { sku: "p_blueglow", name: "Blueglow Lily", description: "Faintly luminescent at dusk. Worth the wait.", rarity: "EPIC", baseGrowthMs: 4 * DAY, waterIntervalMs: 24 * HOUR, imageSeed: "blueglow", unlockLevel: 14, petalsPerHarvest: 280, xpPerHarvest: 320, tags: ["night"], biome: "forest" },
+  { sku: "p_starbloom", name: "Starbloom", description: "Folds into a five-pointed star at midnight.", rarity: "EPIC", baseGrowthMs: 5 * DAY, waterIntervalMs: 24 * HOUR, imageSeed: "starbloom", unlockLevel: 16, petalsPerHarvest: 320, xpPerHarvest: 400, isPremium: true, biome: "alpine" },
 
   // LEGENDARY (1)
-  { sku: "p_celestial", name: "Celestial Bloom", description: "Said to flower only for tended gardens.", rarity: "LEGENDARY", baseGrowthMs: 7 * DAY, waterIntervalMs: 24 * HOUR, imageSeed: "celestial", unlockLevel: 20, petalsPerHarvest: 700, xpPerHarvest: 900, isPremium: true, tags: ["mythic"] },
+  { sku: "p_celestial", name: "Celestial Bloom", description: "Said to flower only for tended gardens.", rarity: "LEGENDARY", baseGrowthMs: 7 * DAY, waterIntervalMs: 24 * HOUR, imageSeed: "celestial", unlockLevel: 20, petalsPerHarvest: 700, xpPerHarvest: 900, isPremium: true, tags: ["mythic"], biome: "tropical" },
 ];
 
 const SHOP_ITEMS = [

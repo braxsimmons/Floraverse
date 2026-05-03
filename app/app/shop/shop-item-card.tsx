@@ -22,7 +22,7 @@ export function ShopItemCard({
     description: string;
     kind: string;
     rarity: string;
-    priceCurrency: "PETALS" | "COINS" | "USD";
+    priceCurrency: "PETALS" | "COINS" | "GEMS" | "USD";
     price: number;
     isPremium: boolean;
     unlockLevel: number;
@@ -34,7 +34,10 @@ export function ShopItemCard({
   const [paywall, setPaywall] = useState(false);
   const router = useRouter();
 
-  const currencyIcon = item.priceCurrency === "PETALS" ? "🌸" : item.priceCurrency === "COINS" ? "🪙" : "$";
+  const currencyIcon =
+    item.priceCurrency === "PETALS" ? "🌸" :
+    item.priceCurrency === "COINS"  ? "🪙" :
+    item.priceCurrency === "GEMS"   ? "💎" : "$";
 
   return (
     <div className="pretty-card p-4 flex flex-col gap-3">
@@ -51,7 +54,7 @@ export function ShopItemCard({
           <span>{currencyIcon}</span>
           <span>{item.price}</span>
         </div>
-        {item.isPremium && <Badge variant="gold"><Crown className="h-3 w-3 mr-1" /> Plus</Badge>}
+        {item.isPremium && <Badge variant="lavender"><Crown className="h-3 w-3 mr-1" /> Rare</Badge>}
       </div>
 
       {locked ? (
@@ -78,7 +81,7 @@ export function ShopItemCard({
               } catch (e: any) {
                 const msg = e?.message ?? "Could not buy";
                 if (msg === "INSUFFICIENT_FUNDS") toast.error("Not enough funds");
-                else if (msg === "PLUS_REQUIRED") setPaywall(true);
+                else if (msg === "INSUFFICIENT_FUNDS") setPaywall(true);
                 else toast.error(msg);
               }
             })
@@ -88,7 +91,7 @@ export function ShopItemCard({
         </Button>
       )}
 
-      <Paywall open={paywall} onOpenChange={setPaywall} reason="This item is part of Floraverse Plus." />
+      <Paywall open={paywall} onOpenChange={setPaywall} reason="This rare item costs gems." />
     </div>
   );
 }

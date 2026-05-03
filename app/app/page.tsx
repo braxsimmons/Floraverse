@@ -10,11 +10,13 @@ import { Flame, Gift, Clock, Sparkles, Sprout } from "lucide-react";
 import { DailyClaimButton, TimedClaimButton } from "./reward-buttons";
 import { PlantArt } from "@/components/game/plant-art";
 import { formatRelativeTime } from "@/lib/utils";
+import { AdRewardCard } from "@/components/game/ad-reward-card";
+import { adAvailability } from "@/server/actions/ads";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  const data = await loadDashboard(session.user.id);
+  const [data, ads] = await Promise.all([loadDashboard(session.user.id), adAvailability()]);
 
   const xpPct = Math.floor(((data.user.xpInLevel) / Math.max(1, data.user.xpToNext)) * 100);
   const upcoming = data.plants
@@ -36,9 +38,7 @@ export default async function DashboardPage() {
               <span>{data.user.xpInLevel} / {data.user.xpToNext} XP</span>
               <span>·</span>
               <span className="flex items-center gap-1"><Flame className="h-3.5 w-3.5 text-bloom-rose" /> {data.user.streakCount} day streak</span>
-              {data.user.subscriptionTier === "PLUS" && (
-                <Badge variant="gold" className="ml-auto">Plus</Badge>
-              )}
+              <Badge variant="lavender" className="ml-auto">{data.user.gems} 💎</Badge>
             </div>
             <Progress value={xpPct} />
             <div className="flex flex-wrap gap-2 pt-2">
@@ -66,6 +66,18 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {ads.enabled && (
+        <AdRewardCard
+          initial={{
+            ready: ads.ready,
+            remainingMs: ads.remainingMs,
+            watchedToday: ads.watchedToday,
+            dailyCap: ads.dailyCap,
+            reward: ads.reward,
+          }}
+        />
+      )}
 
       {ready.length > 0 && (
         <Card className="bg-gradient-to-br from-bloom-gold/30 via-card to-bloom-peach/40">

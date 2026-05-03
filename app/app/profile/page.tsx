@@ -33,9 +33,9 @@ export default async function ProfilePage() {
             {xpInfo.xpInLevel}/{xpInfo.xpToNext} XP · {me.streakCount} day streak
           </div>
           <div className="flex flex-wrap gap-2">
-            {me.subscriptionTier === "PLUS" && <Badge variant="gold">Floraverse Plus</Badge>}
             <Badge variant="rose">{me.petals} 🌸</Badge>
             <Badge variant="gold">{me.bloomCoins} 🪙</Badge>
+            <Badge variant="lavender">{me.gems} 💎</Badge>
           </div>
         </CardContent>
       </Card>
@@ -83,7 +83,7 @@ export default async function ProfilePage() {
           <CardTitle>Account</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button asChild variant="outline"><Link href="/app/billing">Billing</Link></Button>
+          <Button asChild variant="outline"><Link href="/app/billing">Top up</Link></Button>
           <form
             action={async () => {
               "use server";

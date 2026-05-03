@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { ensureStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
-import { APP, COIN_PACKS, PLUS_PLANS } from "@/lib/config";
+import { APP, COIN_PACKS, GEM_PACKS, PLUS_PLANS } from "@/lib/config";
 
 const schema = z.object({
   sku: z.string().min(1),
@@ -35,8 +35,9 @@ export async function POST(req: Request) {
   }
 
   const isCoinPack = COIN_PACKS.some((p) => p.sku === parsed.data.sku);
+  const isGemPack = GEM_PACKS.some((p) => p.sku === parsed.data.sku);
   const isPlus = PLUS_PLANS.some((p) => p.sku === parsed.data.sku);
-  if (!isCoinPack && !isPlus) return NextResponse.json({ error: "Unknown SKU" }, { status: 400 });
+  if (!isCoinPack && !isGemPack && !isPlus) return NextResponse.json({ error: "Unknown SKU" }, { status: 400 });
 
   const checkout = await stripe.checkout.sessions.create({
     customer: customerId,

@@ -176,13 +176,12 @@ export async function clearSlot(input: { x: number; y: number }) {
 
 export async function expandGarden() {
   const userId = await getMe();
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { subscriptionTier: true },
-  });
-  if (user.subscriptionTier !== "PLUS") throw new Error("PLUS_REQUIRED");
   const garden = await ensureGarden(userId);
-  if (garden.width >= 8) return garden;
+  if (garden.width >= 10) return garden;
+  // Cost grows with size: gems = (width - 5) * 5
+  const cost = Math.max(5, (garden.width - 5) * 5);
+  const { adjustBalance } = await import("@/lib/currency");
+  await adjustBalance(userId, "GEMS", -cost, `EXPAND_GARDEN:${garden.width + 1}`);
   const updated = await prisma.garden.update({
     where: { id: garden.id },
     data: { width: garden.width + 1, height: garden.height + 1 },

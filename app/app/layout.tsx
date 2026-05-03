@@ -18,13 +18,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       image: true,
       petals: true,
       bloomCoins: true,
+      gems: true,
       level: true,
-      subscriptionTier: true,
     },
   });
 
   return (
-    <AppShell user={{ ...user, coins: user.bloomCoins }}>
+    <AppShell user={{ name: user.name, image: user.image, petals: user.petals, coins: user.bloomCoins, gems: user.gems, level: user.level }}>
       {children}
     </AppShell>
   );

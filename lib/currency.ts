@@ -19,17 +19,20 @@ export async function adjustBalance(
   if (delta < 0) {
     const user = await client.user.findUnique({
       where: { id: userId },
-      select: { petals: true, bloomCoins: true },
+      select: { petals: true, bloomCoins: true, gems: true },
     });
     if (!user) throw new Error("User not found");
-    const balance = currency === "PETALS" ? user.petals : user.bloomCoins;
+    const balance =
+      currency === "PETALS" ? user.petals :
+      currency === "COINS"  ? user.bloomCoins :
+      currency === "GEMS"   ? user.gems : 0;
     if (balance + delta < 0) throw new Error("INSUFFICIENT_FUNDS");
   }
 
   const data =
-    currency === "PETALS"
-      ? { petals: { increment: delta } }
-      : { bloomCoins: { increment: delta } };
+    currency === "PETALS" ? { petals: { increment: delta } } :
+    currency === "COINS"  ? { bloomCoins: { increment: delta } } :
+                            { gems: { increment: delta } };
 
   await client.user.update({ where: { id: userId }, data });
   await client.currencyLedger.create({

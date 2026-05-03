@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { ensureStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { adjustBalance } from "@/lib/currency";
-import { COIN_PACKS, PLUS_PLANS } from "@/lib/config";
+import { COIN_PACKS, GEM_PACKS, PLUS_PLANS } from "@/lib/config";
 import { trackEvent } from "@/lib/analytics";
 
 export const runtime = "nodejs";
@@ -45,88 +45,13 @@ export async function POST(req: Request) {
           await adjustBalance(userId, "COINS", coinPack.coins, `STRIPE:${sku}`, { sessionId: session.id });
           await trackEvent(userId, "purchase_coins", { sku, coins: coinPack.coins });
         }
-
-        const plus = PLUS_PLANS.find((p) => p.sku === sku);
-        if (plus && session.mode === "subscription" && session.subscription) {
-          const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
-          const sub = await stripe.subscriptions.retrieve(subId);
-          await prisma.user.update({
-            where: { id: userId },
-            data: {
-              subscriptionTier: "PLUS",
-              stripeSubscriptionId: sub.id,
-              subscriptionEndsAt: new Date(sub.current_period_end * 1000),
-            },
-          });
-          await prisma.subscription.upsert({
-            where: { stripeSubscriptionId: sub.id },
-            create: {
-              userId,
-              stripeSubscriptionId: sub.id,
-              stripePriceId: sub.items.data[0]?.price.id ?? "",
-              status: sub.status,
-              currentPeriodEnd: new Date(sub.current_period_end * 1000),
-            },
-            update: {
-              status: sub.status,
-              currentPeriodEnd: new Date(sub.current_period_end * 1000),
-              cancelAtPeriodEnd: sub.cancel_at_period_end,
-            },
-          });
-          await trackEvent(userId, "subscribe_plus", { sku });
+        const gemPack = GEM_PACKS.find((p) => p.sku === sku);
+        if (gemPack) {
+          await adjustBalance(userId, "GEMS", gemPack.gems, `STRIPE:${sku}`, { sessionId: session.id });
+          await trackEvent(userId, "purchase_gems", { sku, gems: gemPack.gems });
         }
-        break;
-      }
 
-      case "customer.subscription.updated": {
-        const sub = event.data.object as Stripe.Subscription;
-        const userIdMeta = (sub.metadata?.userId as string | undefined) ?? null;
-        const userByCustomer = userIdMeta
-          ? null
-          : await prisma.user.findFirst({ where: { stripeCustomerId: sub.customer as string } });
-        const userId = userIdMeta ?? userByCustomer?.id;
-        if (!userId) break;
-        await prisma.subscription.upsert({
-          where: { stripeSubscriptionId: sub.id },
-          create: {
-            userId,
-            stripeSubscriptionId: sub.id,
-            stripePriceId: sub.items.data[0]?.price.id ?? "",
-            status: sub.status,
-            currentPeriodEnd: new Date(sub.current_period_end * 1000),
-            cancelAtPeriodEnd: sub.cancel_at_period_end,
-          },
-          update: {
-            status: sub.status,
-            currentPeriodEnd: new Date(sub.current_period_end * 1000),
-            cancelAtPeriodEnd: sub.cancel_at_period_end,
-          },
-        });
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            subscriptionTier: sub.status === "active" || sub.status === "trialing" ? "PLUS" : "FREE",
-            subscriptionEndsAt: new Date(sub.current_period_end * 1000),
-          },
-        });
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        const sub = event.data.object as Stripe.Subscription;
-        const user = await prisma.user.findFirst({
-          where: { stripeSubscriptionId: sub.id },
-        });
-        if (user) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              subscriptionTier: "FREE",
-              stripeSubscriptionId: null,
-              subscriptionEndsAt: new Date(sub.current_period_end * 1000),
-            },
-          });
-        }
+        // Subscriptions intentionally not handled — Floraverse is free-to-play.
         break;
       }
 

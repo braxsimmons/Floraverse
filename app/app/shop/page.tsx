@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShopItemCard } from "./shop-item-card";
-import { COIN_PACKS, PLUS_PLANS } from "@/lib/config";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Crown } from "lucide-react";
@@ -20,7 +19,7 @@ export default async function ShopPage() {
     }),
     prisma.user.findUniqueOrThrow({
       where: { id: session.user.id },
-      select: { level: true, subscriptionTier: true },
+      select: { level: true },
     }),
   ]);
 
@@ -33,16 +32,16 @@ export default async function ShopPage() {
 
   return (
     <div className="space-y-4">
-      <Card className="bg-gradient-to-br from-bloom-gold/30 via-card to-bloom-peach/40">
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle className="display flex items-center gap-2">
-              <Crown className="h-5 w-5" /> Bloom Coins
+      <Card className="bg-gradient-to-br from-bloom-lavender/30 via-card to-bloom-rose/30">
+        <CardHeader className="flex-row items-center justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="display flex items-center gap-2 text-base sm:text-lg">
+              <Crown className="h-4 w-4 sm:h-5 sm:w-5" /> Need more?
             </CardTitle>
-            <CardDescription>Unlock premium plants & decor</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Coins for everyday speed-ups · gems for rare unlocks.</CardDescription>
           </div>
-          <Button asChild variant="gold">
-            <Link href="/app/billing">Get coins</Link>
+          <Button asChild variant="gold" size="sm" className="shrink-0">
+            <Link href="/app/billing">Top up</Link>
           </Button>
         </CardHeader>
       </Card>
@@ -78,14 +77,8 @@ export default async function ShopPage() {
                       isPremium: item.isPremium,
                       unlockLevel: item.unlockLevel,
                     }}
-                    locked={user.level < item.unlockLevel || (item.isPremium && user.subscriptionTier !== "PLUS")}
-                    lockReason={
-                      user.level < item.unlockLevel
-                        ? `Unlocks at level ${item.unlockLevel}`
-                        : item.isPremium
-                        ? "Plus only"
-                        : undefined
-                    }
+                    locked={user.level < item.unlockLevel}
+                    lockReason={user.level < item.unlockLevel ? `Unlocks at level ${item.unlockLevel}` : undefined}
                   />
                 ))}
               </TabsContent>

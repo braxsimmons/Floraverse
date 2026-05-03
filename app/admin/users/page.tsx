@@ -17,7 +17,7 @@ export default async function AdminUsersPage() {
             <tr>
               <th className="py-2">Name</th>
               <th>Role</th>
-              <th>Tier</th>
+              <th>Gems</th>
               <th>Petals</th>
               <th>Coins</th>
               <th>Status</th>
@@ -32,7 +32,7 @@ export default async function AdminUsersPage() {
                   <div className="text-xs text-muted-foreground">{u.email}</div>
                 </td>
                 <td><Badge variant={u.role === "ADMIN" ? "gold" : "secondary"}>{u.role}</Badge></td>
-                <td>{u.subscriptionTier}</td>
+                <td>{u.gems}</td>
                 <td>{u.petals}</td>
                 <td>{u.bloomCoins}</td>
                 <td>{u.bannedAt ? <Badge variant="rose">Banned</Badge> : <Badge variant="mint">Active</Badge>}</td>

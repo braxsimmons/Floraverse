@@ -79,9 +79,11 @@ model User {
 
   // Game economy
   petals        Int       @default(150)   // free currency
-  bloomCoins    Int       @default(10)    // premium currency
+  bloomCoins    Int       @default(10)    // premium currency (coins)
+  gems          Int       @default(2)     // hard premium (gems)
   xp            Int       @default(0)
   level         Int       @default(1)
+  unlockedBiomes String[] @default(["meadow"])
 
   // Streak / retention
   streakCount       Int       @default(0)
@@ -155,6 +157,7 @@ model Garden {
   userId       String   @unique
   name         String   @default("My Garden")
   theme        String   @default("meadow")
+  biome        String   @default("meadow")        // meadow, desert, tropical, alpine, coastal, forest
   width        Int      @default(6)
   height       Int      @default(6)
   background   String   @default("default")
@@ -219,6 +222,7 @@ model PlantSpecies {
   scientific    String?
   description   String   @db.Text
   rarity        Rarity   @default(COMMON)
+  biome         String   @default("meadow")  // meadow, desert, tropical, alpine, coastal, forest
   baseGrowthMs  Int      // total growth time in ms (sum across stages)
   waterIntervalMs Int    // recommended watering interval
   imageSeed     String   // image filename prefix in /public/assets/plants
@@ -246,6 +250,11 @@ model UserPlant {
   plantedAt    DateTime   @default(now())
   lastWateredAt DateTime  @default(now())
   lastFertilizedAt DateTime?
+  lastMistedAt   DateTime?
+  lastPrunedAt   DateTime?
+  lastWeededAt   DateTime?
+  lastTalkedAt   DateTime?
+  lastSungAt     DateTime?
   growthMsAccumulated Int @default(0)   // tracked growth (paused while wilted)
   isWilted     Boolean    @default(false)
   health       Int        @default(100)
@@ -268,6 +277,11 @@ enum CareActionType {
   TALK
   HARVEST
   REVIVE
+  MIST
+  PRUNE
+  WEED
+  SING
+  SPEEDUP
 }
 
 model CareAction {
@@ -302,6 +316,7 @@ enum ShopItemKind {
 enum CurrencyKind {
   PETALS
   COINS
+  GEMS
   USD
 }
 
@@ -726,4 +741,56 @@ model AdminSetting {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+// =============================
+// REWARDED ADS
+// =============================
+
+enum AdProvider {
+  ADMOB
+  ADSENSE
+  UNITY
+  TEST
+}
+
+model AdRewardClaim {
+  id          String     @id @default(cuid())
+  userId      String
+  provider    AdProvider @default(TEST)
+  rewardCoins Int        @default(0)
+  rewardPetals Int       @default(0)
+  rewardGems  Int        @default(0)
+  verified    Boolean    @default(false)
+  ipHash      String?
+  createdAt   DateTime   @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// =============================
+// GARDEN MARKETPLACE
+// =============================
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELED
+}
+
+model GardenListing {
+  id          String        @id @default(cuid())
+  sellerId    String
+  gardenId    String
+  priceCoins  Int
+  priceGems   Int           @default(0)
+  status      ListingStatus @default(ACTIVE)
+  buyerId     String?
+  soldAt      DateTime?
+  description String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
+  @@index([sellerId])
 }

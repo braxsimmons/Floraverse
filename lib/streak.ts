@@ -10,7 +10,7 @@ import { isSameLocalDay, startOfDay } from "@/lib/utils";
 export async function tickStreak(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { streakCount: true, lastStreakAt: true, subscriptionTier: true },
+    select: { streakCount: true, lastStreakAt: true },
   });
 
   const now = new Date();
@@ -32,11 +32,7 @@ export async function tickStreak(userId: string) {
   yesterday.setDate(yesterday.getDate() - 1);
 
   const continued = isSameLocalDay(user.lastStreakAt, yesterday);
-  const protectedByPlus =
-    user.subscriptionTier === "PLUS" && ECONOMY.plus.streakProtection;
-
-  const nextCount =
-    continued || protectedByPlus ? user.streakCount + 1 : 1;
+  const nextCount = continued ? user.streakCount + 1 : 1;
 
   await prisma.user.update({
     where: { id: userId },
@@ -52,7 +48,7 @@ export async function tickStreak(userId: string) {
 export async function claimDailyReward(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { lastDailyClaimAt: true, streakCount: true, subscriptionTier: true },
+    select: { lastDailyClaimAt: true, streakCount: true },
   });
   const now = new Date();
   if (user.lastDailyClaimAt && isSameLocalDay(user.lastDailyClaimAt, now)) {
@@ -67,8 +63,7 @@ export async function claimDailyReward(userId: string) {
   const milestoneCoins =
     ECONOMY.dailyStreakBonus.milestoneCoinsAt.includes(user.streakCount) ? 5 : 0;
 
-  const multiplier = user.subscriptionTier === "PLUS" ? ECONOMY.plus.petalMultiplier : 1;
-  const totalPetals = Math.floor((ECONOMY.dailyReward.petals + streakBonusPetals) * multiplier);
+  const totalPetals = ECONOMY.dailyReward.petals + streakBonusPetals;
   const totalCoins = ECONOMY.dailyReward.coins + milestoneCoins;
   const totalXp = ECONOMY.dailyReward.xp;
 

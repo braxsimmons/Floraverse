@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sprout, ShoppingBag, Users, ListChecks, User, Crown } from "lucide-react";
+import { Home, Sprout, ShoppingBag, Users, ListChecks, User } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CurrencyPill } from "@/components/game/currency-pill";
@@ -14,24 +14,23 @@ const NAV = [
   { href: "/app/quests", label: "Quests", icon: ListChecks },
   { href: "/app/shop", label: "Shop", icon: ShoppingBag },
   { href: "/app/friends", label: "Friends", icon: Users },
-  { href: "/app/profile", label: "Profile", icon: User },
+  { href: "/app/profile", label: "You", icon: User },
 ];
 
 export function AppShell({
   user,
   children,
 }: {
-  user: { name?: string | null; image?: string | null; petals: number; coins: number; level: number; subscriptionTier: string };
+  user: { name?: string | null; image?: string | null; petals: number; coins: number; gems: number; level: number };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   return (
     <div className="min-h-screen pb-24 sm:pb-0">
-      {/* Top bar */}
       <header className="sticky top-0 z-30 border-b backdrop-blur bg-background/70">
-        <div className="container flex items-center justify-between gap-4 py-3">
-          <Link href="/app">
-            <Logo />
+        <div className="container flex items-center justify-between gap-2 py-2.5">
+          <Link href="/app" className="shrink-0">
+            <Logo className="text-base sm:text-lg" />
           </Link>
           <nav className="hidden sm:flex items-center gap-1">
             {NAV.map((n) => {
@@ -52,11 +51,12 @@ export function AppShell({
               );
             })}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             <CurrencyPill kind="petals" amount={user.petals} />
             <CurrencyPill kind="coins" amount={user.coins} />
-            <Link href="/app/profile">
-              <Avatar className="h-9 w-9 ring-2 ring-card">
+            <CurrencyPill kind="gems" amount={user.gems} />
+            <Link href="/app/profile" className="hidden sm:block">
+              <Avatar className="h-9 w-9 ring-2 ring-card ml-1">
                 <AvatarImage src={user.image ?? undefined} alt={user.name ?? "You"} />
                 <AvatarFallback>{(user.name ?? "U").slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
@@ -65,10 +65,10 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="container py-6">{children}</main>
+      <main className="container py-4 sm:py-6">{children}</main>
 
       {/* Bottom tab bar (mobile) */}
-      <nav className="sm:hidden fixed bottom-3 inset-x-3 z-30 glass rounded-full px-2 py-1.5 shadow-cozy">
+      <nav className="sm:hidden fixed bottom-2 inset-x-2 z-30 glass rounded-full px-1.5 py-1 shadow-cozy">
         <div className="flex items-center justify-between">
           {NAV.map((n) => {
             const Icon = n.icon;
@@ -78,7 +78,7 @@ export function AppShell({
                 key={n.href}
                 href={n.href}
                 className={cn(
-                  "flex-1 grid place-items-center py-2 rounded-full text-[11px] font-medium",
+                  "flex-1 grid place-items-center py-1.5 rounded-full text-[10px] font-medium",
                   active ? "bg-primary text-primary-foreground" : "text-foreground/70",
                 )}
               >

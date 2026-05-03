@@ -35,13 +35,15 @@ export async function purchaseShopItem(input: unknown) {
 
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { level: true, petals: true, bloomCoins: true, subscriptionTier: true },
+    select: { level: true, petals: true, bloomCoins: true, gems: true },
   });
   if (user.level < item.unlockLevel) throw new Error("LEVEL_LOCKED");
-  if (item.isPremium && user.subscriptionTier !== "PLUS") throw new Error("PLUS_REQUIRED");
 
   const total = item.price * quantity;
-  const balance = item.priceCurrency === "PETALS" ? user.petals : user.bloomCoins;
+  const balance =
+    item.priceCurrency === "PETALS" ? user.petals :
+    item.priceCurrency === "COINS"  ? user.bloomCoins :
+    item.priceCurrency === "GEMS"   ? user.gems : 0;
   if (balance < total) throw new Error("INSUFFICIENT_FUNDS");
 
   await prisma.$transaction(async (tx) => {
